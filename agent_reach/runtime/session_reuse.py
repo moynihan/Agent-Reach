@@ -5,10 +5,7 @@ then saved Reach state, before requesting a human login. No password/keychain AP
 """
 from __future__ import annotations
 
-import json
 import time
-
-from agent_reach.utils.paths import PrivatePathError, read_small_text_no_follow
 
 from . import browser, cdp, state
 from .browser_binding import wait_lock
@@ -78,14 +75,7 @@ def _source_cookies(channel: str, domains) -> tuple[list, str]:
                          hint="Run agent-reach browser profiles, then browser use ID. No account was copied.")
     if found:
         return found[0]
-    # Older Reach versions stored the user's login in a per-site owned snapshot.
-    source = state.root() / "sessions" / (channel + "-cloak") / "profile" / "reach-session.json"
-    try:
-        data = json.loads(read_small_text_no_follow(source, max_bytes=2 * 1024 * 1024) or "{}")
-        cookies = _cookies(data.get("cookies", []), domains)
-    except (OSError, ValueError, PrivatePathError):
-        cookies = []
-    return cookies, "saved-reach-session" if cookies else "saved-profile"
+    return [], "saved-profile"
 
 
 def prepare(channel: str, *, force: bool = False) -> dict:
@@ -119,7 +109,6 @@ def prepare(channel: str, *, force: bool = False) -> dict:
                 rollback = [{**c, "value": "", "expires": 1} for c in cookies if key(c) not in old] + previous
                 cdp.call("Storage.setCookies", {"cookies": rollback})
                 raise ReachError(UPSTREAM_BROKEN, "Could not apply the local site session; saved state retained and the original browser is unchanged")
-            browser.save_session()
         result = {"source": source, "copied_cookies": len(cookies), "at": state.now(),
                   "verified": False, "source_changed": False, "cookie_snapshot": 1}
         state.mutate(lambda data: data.setdefault("session_reuse", {}).__setitem__(channel, result))

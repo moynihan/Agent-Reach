@@ -24,7 +24,7 @@ from .base import Action, Channel, Param
 
 class BossChannel(Channel):
     name = "boss"
-    description = "Boss直聘 职位搜索与 JD"
+    description = "Boss Zhipin job search and job descriptions"
     level = "optional"
     login_url = "https://www.zhipin.com/web/user/?ka=header-login"
     session = "boss-agent-cli"
@@ -39,11 +39,11 @@ class BossChannel(Channel):
             "Search jobs using a configured browser session",
             (
                 Param("query", "job keywords"),
-                Param("city", "city, e.g. 深圳", required=False),
+                Param("city", "city name as written on the site (Chinese), e.g. 深圳", required=False),
                 Param("limit", "max results", required=False, type=int, default=10),
             ),
             (("opencli", "_opencli_search"), ("boss-agent-cli", "_cli_search")),
-            live_test={"query": "Python", "city": "深圳", "limit": 3},
+            live_test={"query": "Python", "city": "深圳", "limit": 3},  # Shenzhen; the site expects Chinese city names
             timeout=90,
             public_web=("zhipin.com/job_detail/",),
         ),
@@ -97,6 +97,8 @@ class BossChannel(Channel):
             err = payload.get("error") or {}
             code = str(err.get("code", "")).upper()
             message = str(err.get("message", "boss-agent-cli failed"))[:300]
+            # Chinese keywords are the site's own risk-control wording ("environment anomaly", "captcha",
+            # "security verification", "risk control"); they must stay as the platform emits them.
             if code in {"PLATFORM_BLOCKED", "ACCOUNT_RISK", "ENVIRONMENT_RISK", "CAPTCHA_REQUIRED"} or any(
                 word in message for word in ("code 36", "code 37", "环境异常", "环境存在异常", "验证码", "安全验证", "风控")
             ):
@@ -132,7 +134,7 @@ class BossChannel(Channel):
 
     def _opencli_search(self, *, query, city, limit, timeout):
         from agent_reach.backends.opencli import opencli_call, opencli_items
-        rows = opencli_call("boss", ["search", query, "--city", city or "全国", "--limit", str(limit)], timeout=timeout)
+        rows = opencli_call("boss", ["search", query, "--city", city or "全国", "--limit", str(limit)], timeout=timeout)  # 全国 = nationwide
         return opencli_items(rows)[:limit]
 
 

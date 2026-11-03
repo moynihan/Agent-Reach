@@ -14,7 +14,7 @@ _XHS_LOGIN_HINT = (
 
 class XiaoHongShuChannel(Channel):
     name = "xiaohongshu"
-    description = "小红书笔记"
+    description = "Xiaohongshu notes"
 
     level = "optional"
     login_url = "https://www.xiaohongshu.com/explore"
@@ -35,7 +35,7 @@ class XiaoHongShuChannel(Channel):
                 Param("limit", "max results", required=False, type=int, default=5),
             ),
             (("opencli", "_opencli_search"),),
-            live_test={"query": "咖啡", "limit": 2},
+            live_test={"query": "咖啡", "limit": 2},  # "coffee": a query the Chinese site returns results for
             public_web=("xiaohongshu.com/explore/", "xiaohongshu.com/search_result/", "xhslink.com/"),
         ),
         Action(

@@ -37,6 +37,7 @@ def _readable(item: dict) -> bool:
     title = str(item.get("title") or "").strip()
     if not text or (len(text) < 80 and text.casefold() == title.casefold()):
         return False
+    # Chinese terms are kept on purpose: they match login walls and captcha pages on Chinese sites.
     wall = r"log\s*in|sign\s*in|join\s+(?:now|linkedin)|登录|登入|注册|just a moment|prove your humanity|access denied|security verification|安全验证|验证码"
     if re.fullmatch(rf"(?:{wall})(?:\s*[-|·:].*)?", title, re.I):
         return False
@@ -82,7 +83,7 @@ def attempt(channel: Channel, action: Action, params: dict, *, timeout: float) -
                                "access": "public", "completeness_verified": False}
             out.update(backend=BACKEND, items=items)
             out["meta"]["access"] = {"mode": "public", "scope": scope, "completeness_verified": False,
-                "note": "公开网页结果；不保证站内排序、最新状态、全文或全部评论。需要站内数据时指定 --backend。"}
+                "note": "Public web result; on-site ranking, latest state, full text and complete comments are not guaranteed. Pass --backend for on-site data."}
     # Provider 429/errors belong to Web, never to the destination platform.
     out["meta"]["attempts"] = [{**row, "backend": BACKEND + "/" + row["backend"]}
                                 for row in out["meta"]["attempts"]]

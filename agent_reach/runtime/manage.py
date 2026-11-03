@@ -404,25 +404,16 @@ def skill_dir() -> Path:
     return home_dir() / ".agents" / "skills" / SKILL_NAME
 
 
-def _skill_lang() -> str:
-    for var in ("AGENT_REACH_LANG", "LC_ALL", "LC_MESSAGES", "LANG"):
-        v = os.environ.get(var, "").strip().lower()
-        if v.startswith("en"):
-            return "en"
-    return "zh"
-
-
-def render_skill(lang: Optional[str] = None) -> str:
+def render_skill() -> str:
     from importlib.resources import files
 
-    lang = lang or _skill_lang()
-    template = files("agent_reach").joinpath("skill").joinpath("SKILL_en.md" if lang == "en" else "SKILL.md").read_text("utf-8")
+    template = files("agent_reach").joinpath("skill").joinpath("SKILL.md").read_text("utf-8")
     labels = {"default": "default", "optional": "optional", "experimental": "experimental"}
     rows = ["| channel | level | actions | login |", "|---|---|---|---|"]
     for ch in _channels():
         login = f"`agent-reach login {ch.name}`" if _has_login(ch) else "-"
         if ch.name == "reddit":
-            login = "浏览器路径按需" if lang == "zh" else "Browser path only, if required"
+            login = "Browser path only, if required"
         rows.append(f"| {ch.name} | {labels[ch.level]} | {', '.join(a.name for a in ch.actions)} | {login} |")
     return template.replace("{{CHANNEL_TABLE}}", "\n".join(rows)).replace("{{VERSION}}", __version__)
 
@@ -608,7 +599,7 @@ def _skill_uninstall_targets() -> List[Path]:
 _LEGACY_KEYS = {"twitter_auth_token": "twitter", "twitter_ct0": "twitter", "xueqiu_cookie": "xueqiu",
                 "xhs_cookie": "xiaohongshu"}
 _LEGACY_COMMANDS = {"twitter": "twitter", "xhs": "xiaohongshu", "opencli": "xiaohongshu", "rdt": "reddit",
-                    "bili": "bilibili", "boss": "boss"}
+                    "boss": "boss"}
 #: 1.5 channels that 1.6 no longer has; the report says what replaces them.
 RETIRED_CHANNELS = ("rss", "exa_search")
 
@@ -708,7 +699,7 @@ def setup() -> dict:
         report["path"] = str(atomic_write_private_text(state.root() / "installation-report.md", markdown))
     except (OSError, PrivatePathError):
         # The receipt remains in stdout even if its local copy cannot be saved.
-        report["write_error"] = "安装报告未能保存；完整表格仍在 installation_report.markdown。"
+        report["write_error"] = "The installation report could not be saved; the full table is still in installation_report.markdown."
     result["installation_report"] = report
     if migration:
         state.mutate(lambda saved: saved.__setitem__("migration_reported", True))
@@ -726,8 +717,14 @@ def _retired_mcp_notice() -> list:
 
 def update_check() -> dict:
     """Live check of the latest release; also refreshes the background notice cache."""
+    import urllib.error
+
     try:
         rel = update_notice.fetch_latest(timeout=15)
+    except urllib.error.HTTPError as exc:
+        if exc.code != 404:
+            raise ReachError(UPSTREAM_BROKEN, f"could not reach GitHub: {exc}") from None
+        rel = {"latest": __version__, "notes": ""}  # the fork has no published release yet
     except Exception as exc:  # noqa: BLE001
         raise ReachError(UPSTREAM_BROKEN, f"could not reach GitHub: {exc}") from None
     try:

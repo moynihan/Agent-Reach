@@ -9,6 +9,7 @@ and closes it after 600 seconds without use. Website adapters stay upstream.
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import json
 import os
 import platform
@@ -48,8 +49,11 @@ _LOCK_WAIT = START_WAIT + 30.0
 #: How long Windows setup waits for the user to add the extension from the Web Store.
 _STORE_WAIT = 180.0
 
-OPENCLI_RELEASE_API = "https://api.github.com/repos/jackwener/OpenCLI/releases/latest"
-_EXTENSION_ASSET_RE = re.compile(r"^opencli-extension-.*\.zip$")
+#: The OpenCLI browser extension shipped with the tested OpenCLI release (tools.TOOLS["opencli"].tested),
+#: pinned by file name and sha256 so a changed or compromised upstream release never reaches the browser.
+OPENCLI_EXTENSION_TAG = "v1.8.7"
+OPENCLI_EXTENSION_ASSET = "opencli-extension-v1.0.23.zip"
+OPENCLI_EXTENSION_SHA256 = "e3399db1e9dd626519a8719d638d3c3813494d1f030c1e96799e05ebe7ba5340"
 _USER_AGENT = "agent-reach"
 
 
@@ -238,13 +242,6 @@ def wait_for(check: Callable[[], bool], seconds: float, interval: float = 1.0) -
 # ── downloads ──
 
 
-def _fetch(url: str, timeout: float = 30.0) -> bytes:
-    """GET `url` (honours the OS / env proxy settings)."""
-    req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return resp.read()
-
-
 def _download(url: str, dest: Path, timeout: float = 60.0) -> None:
     req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
     with urllib.request.urlopen(req, timeout=timeout) as resp, open(dest, "wb") as out:
@@ -361,10 +358,15 @@ def extension_version() -> Optional[str]:
         return None
 
 
+def extension_url() -> str:
+    return f"https://github.com/jackwener/OpenCLI/releases/download/{OPENCLI_EXTENSION_TAG}/{OPENCLI_EXTENSION_ASSET}"
+
+
 def refresh_extension(*, upgrade: bool = False) -> dict:
-    """Install or update the OpenCLI extension from the latest OpenCLI release.
+    """Install the pinned OpenCLI extension; `upgrade` re-applies the pin after an Agent Reach update.
 
     Keeps the current copy when GitHub is unreachable; raises only if there is none.
+    A checksum mismatch always raises: the downloaded file is never installed.
     Returns {"version", "updated"}. A running browser is closed before files change.
     """
     from .result import UPSTREAM_BROKEN, ReachError
@@ -372,15 +374,7 @@ def refresh_extension(*, upgrade: bool = False) -> dict:
     current = extension_version()
     if current and not upgrade:
         return {"version": current, "updated": False}
-    try:
-        release = json.loads(_fetch(OPENCLI_RELEASE_API))
-        asset = next(a for a in release.get("assets", []) if _EXTENSION_ASSET_RE.match(a.get("name", "")))
-    except Exception as exc:  # noqa: BLE001
-        if current:
-            return {"version": current, "updated": False}
-        raise ReachError(UPSTREAM_BROKEN, f"could not find the OpenCLI extension release: {exc}") from None
-    state = _load_state()
-    if current and state.get("extension_asset") == asset["name"]:
+    if current and _load_state().get("extension_asset") == OPENCLI_EXTENSION_ASSET:
         return {"version": current, "updated": False}
     from . import state as ledger
     make_private_dir(browser_root())
@@ -388,7 +382,12 @@ def refresh_extension(*, upgrade: bool = False) -> dict:
     work = Path(tempfile.mkdtemp(prefix=".extension-", dir=browser_root()))
     try:
         archive = work / "extension.zip"
-        _download(asset["browser_download_url"], archive)
+        _download(extension_url(), archive)
+        digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+        if digest != OPENCLI_EXTENSION_SHA256:
+            raise ReachError(UPSTREAM_BROKEN, f"OpenCLI extension checksum mismatch: got {digest}",
+                             hint="The pinned release file changed upstream and was not installed. "
+                                  "Inspect the OpenCLI release, then update the pin in agent_reach/runtime/browser.py.")
         unpacked = work / "unpacked"
         unpacked.mkdir()
         _unzip(archive, unpacked)
@@ -397,7 +396,7 @@ def refresh_extension(*, upgrade: bool = False) -> dict:
             raise ValueError("no manifest.json in the extension zip")
         version = json.loads(manifest.read_text("utf-8")).get("version")
         if current and version == current:
-            update_state(extension_asset=asset["name"], extension_version=version)
+            update_state(extension_asset=OPENCLI_EXTENSION_ASSET, extension_version=version)
             return {"version": version, "updated": False}
         if is_running():
             stop()  # never swap files under a running extension; the next launch loads the new one
@@ -411,7 +410,7 @@ def refresh_extension(*, upgrade: bool = False) -> dict:
         raise ReachError(UPSTREAM_BROKEN, f"could not install the OpenCLI extension: {exc}") from None
     finally:
         shutil.rmtree(work, ignore_errors=True)
-    update_state(extension_asset=asset["name"], extension_version=version)
+    update_state(extension_asset=OPENCLI_EXTENSION_ASSET, extension_version=version)
     return {"version": version, "updated": True}
 
 
@@ -452,7 +451,7 @@ def _launch(url: str, *, headless: bool = True) -> None:
     make_private_dir(profile_dir())
     from . import state as ledger
     ledger.remember_path(profile_dir(), "dedicated browser profile")
-    for name in ("watcher.log", "session.json", "last_used", "watcher.lock", "start.lock", "session.lock"):
+    for name in ("watcher.log", "last_used", "watcher.lock", "start.lock", "session.lock"):
         ledger.remember_path(browser_root() / name, "browser lifecycle")
     update_state(started_at=time.time(), headless=headless)
     if not can_load_extension():
@@ -497,22 +496,15 @@ def _spawn_watcher() -> None:
 
 
 def _prepare_shared_profile() -> None:
-    """Keep the old Chrome profile recoverable when changing browser engines."""
+    """Keep the old Chrome profile recoverable when changing browser engines.
+
+    Logins are not carried across engines: cookies live only inside the profile the
+    browser encrypts itself, never in a plaintext copy. The user logs in again.
+    """
     selected = _load_state()
     if (selected.get("backend") != "cloakbrowser" or selected.get("profile_backend") == "cloakbrowser"
             or not profile_dir().is_dir()):
         return
-    if not (browser_root() / "session.json").is_file() and _system_chrome():
-        # An older Reach may have saved only Chrome's encrypted Cookie database.
-        # Briefly open that Reach-owned profile to export it, never a personal profile.
-        try:
-            update_state(backend="chrome", executable=_system_chrome(), launcher_python=None)
-            _launch("about:blank")
-            save_session()
-            stop()
-        finally:
-            update_state(backend=selected.get("backend"), executable=selected.get("executable"),
-                         launcher_python=selected.get("launcher_python"))
     backup = browser_root() / ("profile-before-cloak-" + str(time.time_ns()))
     profile_dir().rename(backup)
     from . import state as ledger
@@ -593,7 +585,6 @@ def stop(timeout: float = 10.0) -> bool:
     _require_owned()
     from . import cdp
 
-    save_session()
     info = cdp.call("SystemInfo.getProcessInfo") or {}
     pid = next((p.get("id") for p in info.get("processInfo", []) if p.get("type") == "browser"), None)
     cdp.call("Browser.close")
@@ -636,42 +627,6 @@ def _require_owned() -> None:
     if not watcher_running() and not _profile_pids():
         from .result import NEED_SETUP, ReachError
         raise ReachError(NEED_SETUP, "Port 9222 belongs to an unmanaged browser; close that debugging session yourself first")
-
-
-def save_session() -> None:
-    """Serialize snapshot reads/writes with logout so an old snapshot cannot revive it."""
-    with _locked(browser_root() / "session.lock", wait=5.0):
-        _save_session_unlocked()
-
-
-def _save_session_unlocked() -> None:
-    from . import cdp
-    result = cdp.call("Storage.getCookies")
-    if result is not None:
-        atomic_write_private_text(browser_root() / "session.json", json.dumps(result))
-
-
-def restore_session() -> None:
-    from . import cdp
-    try:
-        text = read_small_text_no_follow(browser_root() / "session.json", max_bytes=2 * 1024 * 1024)
-        rows = json.loads(text or "{}").get("cookies", [])
-    except (OSError, ValueError, PrivatePathError):
-        return
-    existing = cdp.call("Storage.getCookies")
-    if existing is None:
-        return
-    keys = {(c["name"], c["domain"], c.get("path", "/")) for c in existing.get("cookies", [])}
-    allowed = {"name", "value", "domain", "path", "secure", "httpOnly", "sameSite", "expires"}
-    missing = [{k: v for k, v in row.items() if k in allowed} for row in rows
-               if isinstance(row, dict) and row.get("name") and row.get("domain")
-               and (row["name"], row["domain"], row.get("path", "/")) not in keys
-               and isinstance(row.get("expires", -1), (int, float))
-               and (row.get("expires", -1) <= 0 or row["expires"] > time.time())]
-    if missing and cdp.call("Storage.setCookies", {"cookies": missing}) is None:
-        from .result import UPSTREAM_BROKEN, ReachError
-        raise ReachError(UPSTREAM_BROKEN, "Saved login could not be restored; the saved session was retained")
-    update_state(restored_cookies=len(missing))
 
 
 def clear_site(domains: List[str]) -> int:
@@ -728,7 +683,6 @@ def _clear_running_site(domains: List[str]) -> int:
         if cdp.call("Storage.clearDataForOrigin", {"origin": origin,
                     "storageTypes": "all"}, page=True) is None:
             raise ReachError(UPSTREAM_BROKEN, "Could not clear this site's browser storage; channel retained")
-    _save_session_unlocked()
     after = cdp.call("Storage.getCookies")
     if after is None or any(any(cdp.domain_matches(c.get("domain", ""), d) for d in domains) for c in after.get("cookies", [])):
         raise ReachError(UPSTREAM_BROKEN, "Site login cleanup could not be verified; channel retained")

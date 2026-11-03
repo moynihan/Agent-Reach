@@ -1,17 +1,17 @@
 # Agent Reach
 
-> Makes it easier for CLI agents (Claude Code, Codex, Hermes Agent, OpenClaw, ...) to reach the internet: login-walled platforms (XiaoHongShu, Twitter/X, Reddit, LinkedIn), video content (YouTube and Bilibili subtitles, YouTube speech-to-text), Chinese platforms, and clean structured data (Xueqiu, V2EX, GitHub). One entry point, one JSON output shape.
+> Makes it easier for CLI agents (Claude Code, Codex, Hermes Agent, OpenClaw, ...) to reach the internet: login-walled platforms (XiaoHongShu, Twitter/X, Reddit, LinkedIn), video content (YouTube subtitles and speech-to-text), and clean structured data (Xueqiu, GitHub). One entry point, one JSON output shape.
 
 ## Install
 
-- [Installation Guide](https://github.com/Panniantong/Agent-Reach/blob/main/docs/install.md): agent-executable steps
-- Install from GitHub only, with uv: `uv tool install https://github.com/Panniantong/Agent-Reach/archive/refs/tags/v1.6.0.zip`, then `agent-reach setup`. The PyPI package named `agent-reach` is NOT this project.
+- [Installation Guide](https://github.com/moynihan/Agent-Reach/blob/main/docs/install.md): agent-executable steps
+- Install from GitHub only, with uv: `uv tool install https://github.com/moynihan/Agent-Reach/archive/refs/tags/v1.6.0.zip`, then `agent-reach setup`. The PyPI package named `agent-reach` is NOT this project.
 - `setup` turns on the default channels and places one copy of the skill at `~/.agents/skills/agent-reach/SKILL.md`, linked into the skill folders of other AIs found on the machine; `agent-reach skill link <skills-dir>` adds another AI.
 
 ## Commands
 
 - `agent-reach channels`: channels, actions, params (live source of truth)
-- `agent-reach <channel> <action> [args]`: e.g. `agent-reach bilibili search python`
+- `agent-reach <channel> <action> [args]`: e.g. `agent-reach youtube search python`
 - `agent-reach read <url>`: read a link with the matching channel
 - Output: `{schema_version, ok, channel, action, backend, items, meta, error}`; error codes NEED_SETUP, NEED_LOGIN, UPSTREAM_BROKEN, TIMEOUT, RATE_LIMITED, NOT_FOUND, BAD_INPUT
 - Management: `setup`, `add|remove <channel>`, `login|logout <channel>` (the user logs in), `browser setup|status`, `doctor`, `check`, `skill`, `skill link <dir>`, `update`, `configure`, `uninstall`
@@ -21,13 +21,12 @@
 
 ## Channels
 
-- default: web, youtube, github, v2ex, bilibili (web is a fallback when the agent's own search/fetch fails)
-- optional: xiaohongshu, reddit, linkedin, boss, xueqiu, xiaoyuzhou (Groq key)
+- default: web, youtube, github (web is a fallback when the agent's own search/fetch fails)
+- optional: xiaohongshu, reddit, linkedin, boss, xueqiu
 - experimental: twitter, facebook, instagram
 
 ## Docs
 
-- [README (中文)](https://github.com/Panniantong/Agent-Reach/blob/main/README.md)
-- [README (English)](https://github.com/Panniantong/Agent-Reach/blob/main/docs/README_en.md)
-- [Update](https://github.com/Panniantong/Agent-Reach/blob/main/docs/update.md)
-- [Troubleshooting](https://github.com/Panniantong/Agent-Reach/blob/main/docs/troubleshooting.md)
+- [README](https://github.com/moynihan/Agent-Reach/blob/main/README.md)
+- [Update](https://github.com/moynihan/Agent-Reach/blob/main/docs/update.md)
+- [Troubleshooting](https://github.com/moynihan/Agent-Reach/blob/main/docs/troubleshooting.md)

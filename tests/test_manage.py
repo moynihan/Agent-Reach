@@ -91,6 +91,9 @@ def env(monkeypatch):
     # A private npm fixture exercises dependency installation without shipping MCP.
     monkeypatch.setitem(tools.TOOLS, "mcporter", tools.Tool("mcporter", "npm", "mcporter", ("mcporter",), needs=("node",)))
     monkeypatch.setitem(tools._BY_COMMAND, "mcporter", tools.TOOLS["mcporter"])
+    # A private pip fixture (the real bilibili channel is gone from this fork).
+    monkeypatch.setitem(tools.TOOLS, "bili-cli", tools.Tool("bili-cli", "pip", "bilibili-cli", ("bili",), tested="0.6.2"))
+    monkeypatch.setitem(tools._BY_COMMAND, "bili", tools.TOOLS["bili-cli"])
     monkeypatch.setenv("PATH", os.environ.get("PATH", ""))  # cli.main extends PATH; restore it
     chans = [Web(), Vid(), Bili(), Bili2(), Needy(), Site(), Site2(), Linky()]
     monkeypatch.setattr(manage, "_channels", lambda: chans)
@@ -174,9 +177,9 @@ def test_old_record_without_version_gets_one_without_reinstall(env):
 
 
 def test_install_spec_uses_tested_versions_or_floor_and_exclude():
-    assert tools.install_spec(tools.TOOLS["bili-cli"]) == "bilibili-cli==0.6.2"
+    assert tools.install_spec(tools.Tool("v", "pip", "bilibili-cli", ("v",), tested="0.6.2")) == "bilibili-cli==0.6.2"
     spec = tools.install_spec(tools.TOOLS["boss-agent-cli"])
-    assert "git+" not in spec and spec.endswith("/4c991b77086a203173bf08a4cb64a23af6514fe6.zip")
+    assert "git+" not in spec and "/4c991b77086a203173bf08a4cb64a23af6514fe6.zip#sha256=" in spec
     assert tools.install_spec(tools.Tool("y", "pip", "pkg", ("y",), floor="1.0", exclude=("1.5",))) == "pkg>=1.0,!=1.5"
     npm = tools.Tool("x", "npm", "pkg", ("x",), floor="1.0.0", exclude=("1.2.0", "1.1.0"))
     assert tools.install_spec(npm) == "pkg@>=1.0.0 <1.1.0 || >1.1.0 <1.2.0 || >1.2.0"
@@ -568,25 +571,25 @@ def test_setup_adds_default_channels_and_survives_a_failing_install(env, monkeyp
     report = result['installation_report']
     assert report['markdown'] == (state.root() / 'installation-report.md').read_text(encoding='utf-8')
     assert report['path'] == str(state.root() / 'installation-report.md')
-    assert '安装失败：UPSTREAM_BROKEN' in report['markdown']
+    assert '(install failed: UPSTREAM_BROKEN)' in report['markdown']
 
 
 def test_setup_text_displays_compact_capability_table_and_keeps_json_mode(env, capsys, monkeypatch):
     from agent_reach.runtime import cli, onboarding
 
-    monkeypatch.setattr(onboarding, '_local_greeting', lambda: '早上好呀，想搜点什么？☀️')
+    monkeypatch.setattr(onboarding, '_local_greeting', lambda: 'Good morning! What would you like to look up? ☀️')
 
     assert cli.main(['setup', '--text']) == 0
     text = capsys.readouterr().out
-    assert text.startswith('早上好呀，想搜点什么？☀️\n')
-    assert '| 平台 | 不登录可以查什么 | 需要登录后再试 |' in text
+    assert text.startswith('Good morning! What would you like to look up? ☀️\n')
+    assert '| Platform | Without login | After login |' in text
     assert text.count('|---|---|---|') == 1
-    assert '完整报告已保存：' in text
+    assert 'Full report saved to: ' in text
     assert not text.startswith('{')
     assert cli.main(['setup']) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload['ok']
-    assert payload['result']['installation_report']['markdown'] == text.split('\n完整报告已保存：')[0]
+    assert payload['result']['installation_report']['markdown'] == text.split('\nFull report saved to: ')[0]
 
 
 def test_setup_receipt_never_overwrites_a_linked_foreign_file(env, tmp_path):
@@ -603,7 +606,7 @@ def test_setup_receipt_never_overwrites_a_linked_foreign_file(env, tmp_path):
     assert foreign.read_text() == 'keep this'
     assert result['installation_report']['path'] is None
     assert result['installation_report']['write_error']
-    assert '| 平台 | 不登录可以查什么 | 需要登录后再试 |' in result['installation_report']['markdown']
+    assert '| Platform | Without login | After login |' in result['installation_report']['markdown']
 
 
 # ── uninstall ──
@@ -636,11 +639,10 @@ def test_uninstall_closes_the_browser_instead_of_refusing(env):
 
 
 def test_skill_lists_every_channel_and_has_no_placeholders(env):
-    for lang in ("zh", "en"):
-        text = manage.render_skill(lang)
-        assert "{{" not in text
-        for ch in env["chans"]:
-            assert f"| {ch.name} |" in text
+    text = manage.render_skill()
+    assert "{{" not in text
+    for ch in env["chans"]:
+        assert f"| {ch.name} |" in text
 
 
 def _seed_our_copy(path):

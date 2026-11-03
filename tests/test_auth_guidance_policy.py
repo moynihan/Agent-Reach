@@ -66,7 +66,7 @@ def test_public_guidance_never_installs_the_unrelated_pypi_package():
             path.read_text(encoding="utf-8").splitlines(), 1
         ):
             if bare_install.search(line) and (
-                "github.com/Panniantong/agent-reach" not in line
+                "github.com/moynihan/agent-reach" not in line.lower()
             ):
                 violations.append(
                     f"{path.relative_to(ROOT)}:{line_number}: {line.strip()}"

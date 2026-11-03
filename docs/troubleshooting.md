@@ -46,7 +46,7 @@ Some channel tools install at tested versions; others use a supported range. `ag
 
 Boss requires an existing CDP BOSS page. Select it with `browser bind boss http://127.0.0.1:PORT`. Only explicit `login boss --new-browser` may open its persistent dedicated profile. After the user confirms login and stability, run `login boss --sync`. Do not clear risk locks or switch profiles to retry a platform block.
 
-LinkedIn/Bilibili preserve existing native sessions. `login CHANNEL --native` explicitly runs their own authentication if necessary. Saved state is not proof of authentication: use `check CHANNEL --search`.
+LinkedIn preserves existing native sessions. `login CHANNEL --native` explicitly runs their own authentication if necessary. Saved state is not proof of authentication: use `check CHANNEL --search`.
 
 Search-only acceptance is shown as search_ready, not proof that every action works. PLATFORM_BLOCKED means stop and have the user check the official page. BUSY means another Reach command owns the same browser; schedule later.
 
@@ -61,7 +61,7 @@ Agent Reach is installed with uv. A copy installed another way (pip or pipx, as 
 A new version broke something? Go back to the previous release, then line the tools and skill up with it:
 
 ```bash
-uv tool install --force https://github.com/Panniantong/Agent-Reach/archive/refs/tags/v<previous>.zip
+uv tool install --force https://github.com/moynihan/Agent-Reach/archive/refs/tags/v<previous>.zip
 agent-reach update --sync-only
 ```
 
@@ -83,4 +83,4 @@ It is used for every Agent Reach command. An `HTTPS_PROXY` set in your shell tak
 
 - `agent-reach update` and try again.
 - Remove and re-add a channel: `agent-reach remove <channel>` then `agent-reach add <channel>` (remove also clears its login, its site cookies in the Agent Reach browser, and its private tools nobody else uses).
-- Open an issue at https://github.com/Panniantong/Agent-Reach/issues with the output of `agent-reach doctor --text` (it starts with the version) and `agent-reach check <channel> --text`. Remove any personal data first.
+- Open an issue at https://github.com/moynihan/Agent-Reach/issues with the output of `agent-reach doctor --text` (it starts with the version) and `agent-reach check <channel> --text`. Remove any personal data first.

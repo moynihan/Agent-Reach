@@ -53,10 +53,10 @@ TOOLS: Dict[str, Tool] = {
     t.name: t
     for t in (
         Tool("cloakbrowser", "pip", "cloakbrowser", ("cloakbrowser",), tested="0.6.3"),
-        Tool("bili-cli", "pip", "bilibili-cli", ("bili",), tested="0.6.2"),
         Tool(
             "boss-agent-cli", "pip",
-            "boss-agent-cli @ https://github.com/can4hou6joeng4/boss-agent-cli/archive/4c991b77086a203173bf08a4cb64a23af6514fe6.zip",
+            # pip verifies the #sha256 fragment before installing the archive.
+            "boss-agent-cli @ https://github.com/can4hou6joeng4/boss-agent-cli/archive/4c991b77086a203173bf08a4cb64a23af6514fe6.zip#sha256=240dfa7d2b7b0093e43735f49ae6d47ee415b7e21fde230075b6d311072bd04f",
             ("boss",),
         ),
         Tool("opencli", "npm", "@jackwener/opencli", ("opencli",), singleton=True, floor="1.8.7", exclude=("1.8.8",), tested="1.8.7", needs=("node",)),
@@ -527,7 +527,7 @@ def ensure(name: str, *, allow_upgrade: bool = False, upgrade: bool = False) -> 
     if private_ok and tool.name == "boss-agent-cli":
         venv = tool_dir(tool.name) / "venv"
         sources = list(venv.glob("**/boss_agent_cli-*.dist-info/direct_url.json"))
-        expected = tool.package.split(" @ ", 1)[-1].strip()
+        expected = tool.package.split(" @ ", 1)[-1].split("#", 1)[0].strip()  # pip records the URL without its hash fragment
         try:
             source = json.loads(sources[0].read_text()) if sources else {}
             commit = expected.rsplit("/", 1)[-1].removesuffix(".zip")

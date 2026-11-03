@@ -44,6 +44,8 @@ def _opencli_error(text: str, login_hint: str):
     message = str(err.get("message", "") or text.strip() or "OpenCLI failed")[:500]
     upstream_hint = str(err.get("help") or err.get("hint") or "").strip() or None
     low = message.lower()
+    # Chinese keywords mirror the platforms' own error wording (environment anomaly, captcha,
+    # security verification, too-frequent access, login); keep them as the sites emit them.
     if any(w in low for w in ("环境异常", "环境存在异常", "browser environment", "captcha", "验证码", "安全验证", "account_risk")) or code in {"ACCOUNT_RISK", "CAPTCHA_REQUIRED"}:
         return ReachError(PLATFORM_BLOCKED, message, hint=upstream_hint)
     if code in {"RATE_LIMITED", "RATE_LIMIT"} or any(w in low for w in ("http 429", "too many requests", "访问过于频繁")):
@@ -73,8 +75,6 @@ def opencli_call(site: str, args, *, timeout: float, login_hint: str = ""):
         raise _opencli_error(out, login_hint) from None
     if isinstance(data, dict) and data.get("ok") is False:
         raise _opencli_error(out, login_hint)
-    from agent_reach.runtime import browser
-    browser.save_session()
     return data
 
 

@@ -4,54 +4,6 @@
  "pending": [],
  "results": [
   {
-   "channel": "bilibili",
-   "action": "hot",
-   "method": "real-cli",
-   "backend": "bili-cli",
-   "item_count": 2,
-   "at": "2026-10-23T06:26:12.707111+00:00",
-   "os": "Darwin",
-   "source_sha256": "7f59fab927be5c4c01c1c13c1255be39f1082a0aaac9f28db16305ef0c8530fe",
-   "passed": true,
-   "error": null
-  },
-  {
-   "channel": "bilibili",
-   "action": "read",
-   "method": "real-cli",
-   "backend": "bili-cli",
-   "item_count": 1,
-   "at": "2026-10-23T06:26:12.143211+00:00",
-   "os": "Darwin",
-   "source_sha256": "7f59fab927be5c4c01c1c13c1255be39f1082a0aaac9f28db16305ef0c8530fe",
-   "passed": true,
-   "error": null
-  },
-  {
-   "channel": "bilibili",
-   "action": "search",
-   "method": "real-cli",
-   "backend": "bili-cli",
-   "item_count": 2,
-   "at": "2026-10-23T06:26:11.635741+00:00",
-   "os": "Darwin",
-   "source_sha256": "7f59fab927be5c4c01c1c13c1255be39f1082a0aaac9f28db16305ef0c8530fe",
-   "passed": true,
-   "error": null
-  },
-  {
-   "channel": "bilibili",
-   "action": "subtitle",
-   "method": "real-cli",
-   "backend": null,
-   "item_count": 0,
-   "at": "2026-10-23T06:26:13.473741+00:00",
-   "os": "Darwin",
-   "source_sha256": "7f59fab927be5c4c01c1c13c1255be39f1082a0aaac9f28db16305ef0c8530fe",
-   "passed": false,
-   "error": "NEED_LOGIN"
-  },
-  {
    "channel": "boss",
    "action": "read",
    "method": "real-cli",
@@ -238,54 +190,6 @@
    "backend": "opencli",
    "item_count": 2,
    "at": "2026-10-23T06:24:09.484988+00:00",
-   "os": "Darwin",
-   "source_sha256": "7f59fab927be5c4c01c1c13c1255be39f1082a0aaac9f28db16305ef0c8530fe",
-   "passed": true,
-   "error": null
-  },
-  {
-   "channel": "v2ex",
-   "action": "hot",
-   "method": "real-cli",
-   "backend": "v2ex-api",
-   "item_count": 3,
-   "at": "2026-10-23T06:27:51.408802+00:00",
-   "os": "Darwin",
-   "source_sha256": "7f59fab927be5c4c01c1c13c1255be39f1082a0aaac9f28db16305ef0c8530fe",
-   "passed": true,
-   "error": null
-  },
-  {
-   "channel": "v2ex",
-   "action": "node",
-   "method": "real-cli",
-   "backend": "v2ex-api",
-   "item_count": 3,
-   "at": "2026-10-23T06:27:52.949405+00:00",
-   "os": "Darwin",
-   "source_sha256": "7f59fab927be5c4c01c1c13c1255be39f1082a0aaac9f28db16305ef0c8530fe",
-   "passed": true,
-   "error": null
-  },
-  {
-   "channel": "v2ex",
-   "action": "read",
-   "method": "real-cli",
-   "backend": "v2ex-api",
-   "item_count": 1,
-   "at": "2026-10-23T06:27:55.248602+00:00",
-   "os": "Darwin",
-   "source_sha256": "7f59fab927be5c4c01c1c13c1255be39f1082a0aaac9f28db16305ef0c8530fe",
-   "passed": true,
-   "error": null
-  },
-  {
-   "channel": "v2ex",
-   "action": "user",
-   "method": "real-cli",
-   "backend": "v2ex-api",
-   "item_count": 1,
-   "at": "2026-10-23T06:27:57.201571+00:00",
    "os": "Darwin",
    "source_sha256": "7f59fab927be5c4c01c1c13c1255be39f1082a0aaac9f28db16305ef0c8530fe",
    "passed": true,
@@ -480,11 +384,6 @@
    "reason": "Platform rate limit on the test account; approved to ship untested in 1.6.0"
   },
   {
-   "channel": "bilibili",
-   "action": "subtitle",
-   "reason": "No Bilibili login on the test machine; approved to ship untested in 1.6.0"
-  },
-  {
    "channel": "linkedin",
    "action": "jobs",
    "reason": "No LinkedIn login on the test machine; approved to ship untested in 1.6.0"
@@ -503,11 +402,6 @@
    "channel": "xueqiu",
    "action": "hot_stocks",
    "reason": "No Xueqiu login on the test machine; approved to ship untested in 1.6.0"
-  },
-  {
-   "channel": "xiaoyuzhou",
-   "action": "transcribe",
-   "reason": "No Groq key on the test machine; approved to ship untested in 1.6.0"
   }
  ]
 }

@@ -68,7 +68,7 @@ def test_boss_zip_install_provenance_is_reused(monkeypatch):
     binpath.touch()
     direct = tools.tool_dir(tool.name) / "venv/lib/python3.12/site-packages/boss_agent_cli-1.0.dist-info/direct_url.json"
     direct.parent.mkdir(parents=True)
-    direct.write_text(json.dumps({"url": tool.package.split(" @ ")[1], "archive_info": {}}))
+    direct.write_text(json.dumps({"url": tool.package.split(" @ ")[1].split("#")[0], "archive_info": {}}))
     tools.record(tool.name, "1.0")
     install = Mock()
     monkeypatch.setattr(tools, "_install", install)

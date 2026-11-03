@@ -4,7 +4,6 @@
 from agent_reach.channels import get_all_channels, get_channel
 from agent_reach.channels.facebook import FacebookChannel
 from agent_reach.channels.instagram import InstagramChannel
-from agent_reach.channels.v2ex import V2EXChannel
 from agent_reach.channels.xueqiu import XueqiuChannel
 
 
@@ -25,7 +24,7 @@ class TestChannelRegistry:
         assert "twitter" in names
         assert "facebook" in names
         assert "instagram" in names
-        assert "v2ex" in names
+        assert "reddit" in names
 
 
 
@@ -45,15 +44,6 @@ class TestOpenCLISiteChannels:
         assert ch.can_handle("https://instagr.am/p/abc123/")
         assert not ch.can_handle("https://facebook.com/openai")
 
-
-
-class TestV2EXChannel:
-    def test_can_handle_v2ex_urls(self):
-        ch = V2EXChannel()
-        assert ch.can_handle("https://www.v2ex.com/t/1234567")
-        assert ch.can_handle("https://v2ex.com/go/python")
-        assert not ch.can_handle("https://github.com/user/repo")
-        assert not ch.can_handle("https://reddit.com/r/Python")
 
 
 class TestXueqiuChannel:

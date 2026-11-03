@@ -123,7 +123,7 @@ def test_can_handle_accepts_any_url():
         assert channel.can_handle(sample) is True, sample
 
 
-# --- check: ready without any network probe (零开销兜底) ---
+# --- check: ready without any network probe (zero-cost fallback) ---
 
 
 
@@ -255,6 +255,11 @@ def test_read_rejects_oversized_reader_response():
             "Title: Attention Required! | Cloudflare\n\n"
             "Sorry, you have been blocked.\n\nRay ID: 1234567890abcdef\n"
         ),
+        (
+            "Title: Blocked\n\nURL Source: https://www.reddit.com/r/Python/\n\n"
+            "You've been blocked by network security.\n\n"
+            "To continue, log in to your Reddit account or use your developer token\n"
+        ),
     ],
 )
 def test_read_rejects_high_confidence_antibot_pages(body):
@@ -263,7 +268,7 @@ def test_read_rejects_high_confidence_antibot_pages(body):
     with patch(
         "urllib.request.urlopen", return_value=_resp(body.encode("utf-8"))
     ) as mock_open:
-        with pytest.raises(RuntimeError, match="反爬验证页"):
+        with pytest.raises(RuntimeError, match="anti-bot verification page"):
             channel.read("https://example.com/protected")
 
     mock_open.assert_called_once()

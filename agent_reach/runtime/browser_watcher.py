@@ -6,7 +6,7 @@ so only one runs.
 With --launch --cloak it owns a Cloak persistent context on every OS; otherwise
 it uses the legacy Chrome pipe on POSIX or watches a Windows Chrome fallback.
 The same 600-second idle timer handles all engines. Website extraction is done
-by upstream tools. Snapshot writes are serialized with logout/removal.
+by upstream tools.
 """
 
 from __future__ import annotations
@@ -70,6 +70,15 @@ def _load_extension(conn) -> None:
         print(f"Extensions.loadUnpacked failed: {reply.get('error')}", file=sys.stderr, flush=True)
 
 
+def _browser_locale() -> str:
+    """The user's locale as a BCP 47 tag (en_US.UTF-8 -> en-US); en-US when the shell does not say."""
+    for var in ("LC_ALL", "LC_MESSAGES", "LANG"):
+        value = os.environ.get(var, "").split(".")[0].replace("_", "-")
+        if value and value.upper() not in {"C", "POSIX"}:
+            return value
+    return "en-US"
+
+
 def _launch_cloak(url: str, *, headless: bool = True):
     """Use the SDK's public launcher; one persistent profile, no site rules."""
     from cloakbrowser import launch_persistent_context
@@ -86,7 +95,7 @@ def _launch_cloak(url: str, *, headless: bool = True):
 
 
     ctx = launch_persistent_context(
-        str(browser.profile_dir()), headless=headless, locale="zh-CN",
+        str(browser.profile_dir()), headless=headless, locale=_browser_locale(),
         args=["--remote-debugging-address=127.0.0.1", f"--remote-debugging-port={browser.CDP_PORT}"],
         extension_paths=[str(browser.extension_dir())],
         proxy=proxy_options,
@@ -118,7 +127,6 @@ def watch(idle: Optional[float] = None, poll: float = 2.0, *, launch: Optional[s
                 _load_extension(conn)
             browser.update_state(running_backend="cloakbrowser" if cloak else "chrome",
                                  profile_backend="cloakbrowser" if cloak else "chrome", headless=headless)
-            browser.restore_session()
             if launch != "about:blank":
                 if ctx is not None:
                     ctx.pages[0].goto(launch, wait_until="domcontentloaded", timeout=30000)
@@ -138,7 +146,6 @@ def watch(idle: Optional[float] = None, poll: float = 2.0, *, launch: Optional[s
             if bridge_proc is not None and bridge_proc.poll() is not None:
                 return "owned Bridge exited; browser closed with it"
             browser.observe_activity()
-            browser.save_session()
             used = max(began, browser.last_used() or 0.0)
             left = used + idle - time.time()
             if left <= 0:

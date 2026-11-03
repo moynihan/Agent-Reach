@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Dedicated tests for the ``xueqiu`` (雪球) channel.
+"""Dedicated tests for the ``xueqiu`` channel.
 
 Xueqiu wraps several public JSON endpoints and does real shaping of the
 responses — normalising quotes, unwrapping the JSON-in-JSON hot-post

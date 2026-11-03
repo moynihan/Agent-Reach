@@ -64,7 +64,9 @@ def _is_antibot_page(body: bytes) -> bool:
     cloudflare_block = "title: attention required! | cloudflare" in sample and (
         "ray id" in sample or "/cdn-cgi/challenge-platform/" in sample
     )
-    return (jina_captcha_warning and challenge_structure) or cloudflare_block
+    # Reddit serves this to Jina's fetcher; Exa (the next backend) still gets the page.
+    reddit_block = "you've been blocked by network security" in sample
+    return (jina_captcha_warning and challenge_structure) or cloudflare_block or reddit_block
 
 
 def _public_url(target: str) -> str:
@@ -152,7 +154,7 @@ def _parse_jina(url: str, body: str) -> dict:
 
 class WebChannel(Channel):
     name = "web"
-    description = "网页搜索与阅读（Agent 自带工具不可用时的保底）"
+    description = "Web search and page reading (fallback when the agent's own tools are unavailable)"
 
     level = "default"
     actions = (
@@ -179,7 +181,7 @@ class WebChannel(Channel):
         return True  # Fallback — handles any URL
 
     def read(self, url: str, timeout: float = 30) -> str:
-        """通过 Jina Reader 读取网页，返回 Markdown 全文。"""
+        """Read a web page through Jina Reader and return the full Markdown text."""
         url = normalize_public_http_url(url)
         jina_url = f"https://r.jina.ai/{url}"
         req = urllib.request.Request(
@@ -194,8 +196,8 @@ class WebChannel(Channel):
             )
         if _is_antibot_page(body):
             raise RuntimeError(
-                "Jina Reader 返回了反爬验证页，未获取到目标内容；"
-                "请改用站点专用工具或浏览器读取"
+                "Jina Reader returned an anti-bot verification page instead of the target content; "
+                "use the site-specific tool or a browser to read it"
             )
         return body.decode("utf-8")
 

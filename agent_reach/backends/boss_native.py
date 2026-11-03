@@ -36,7 +36,7 @@ def main():
             # or job_card(), both of which can create an independent HTTP session.
             raw = boss.job_card_browser(ref['security_id'], ref.get('lid', ''))
         else:
-            raw = boss.search_jobs(spec['query'], city=spec.get('city') or '全国', page=1)
+            raw = boss.search_jobs(spec['query'], city=spec.get('city') or '全国', page=1)  # 全国 = nationwide
     if raw.get('code') != 0:
         code = raw.get('code')
         mapped = {36: 'PLATFORM_BLOCKED', 37: 'PLATFORM_BLOCKED', 9: 'RATE_LIMITED', 1: 'NEED_LOGIN'}.get(code, 'UPSTREAM_BROKEN')

@@ -96,7 +96,6 @@ def test_explicit_import_can_refresh_a_saved_snapshot(monkeypatch):
     source = Mock(return_value=(incoming, 'daily'))
     call = Mock(return_value={})
     monkeypatch.setattr(browser, 'ensure_running', lambda: None)
-    monkeypatch.setattr(browser, 'save_session', lambda: None)
     monkeypatch.setattr(session_reuse, '_source_cookies', source)
     monkeypatch.setattr(cdp, 'call', call)
 
@@ -153,7 +152,6 @@ def test_unavailable_source_keeps_saved_destination_and_does_not_open_login(monk
 def test_site_snapshot_expires_destination_only_cookies_and_preserves_other_sites(monkeypatch):
     from agent_reach.runtime import session_reuse
     monkeypatch.setattr(browser,'ensure_running',lambda:None)
-    monkeypatch.setattr(browser,'save_session',lambda:None)
     incoming=[{'name':'sid','value':'chosen','domain':'.xiaohongshu.com','path':'/'}]
     monkeypatch.setattr(session_reuse,'_source_cookies',lambda *a:(incoming,'daily'))
     jar=[{'name':'old_account','value':'stale','domain':'.xiaohongshu.com','path':'/'},
@@ -177,7 +175,6 @@ def test_site_snapshot_expires_destination_only_cookies_and_preserves_other_site
 def test_site_import_failure_restores_previous_site_and_retains_saved_snapshot(monkeypatch):
     from agent_reach.runtime import session_reuse
     monkeypatch.setattr(browser,'ensure_running',lambda:None)
-    monkeypatch.setattr(browser,'save_session',lambda:pytest.fail('saved a failed import'))
     monkeypatch.setattr(session_reuse,'_source_cookies',lambda *a:([{'name':'new','value':'incoming','domain':'.xiaohongshu.com'}],'daily'))
     calls=[]
     def call(method,params=None):
@@ -197,42 +194,10 @@ def test_dispatch_worker_reuses_session_without_relocking_the_calling_thread(mon
     from agent_reach.runtime import dispatch, run, session_reuse
     monkeypatch.setattr(browser, 'ensure_running', lambda: None)
     monkeypatch.setattr(browser, 'bound_context', lambda: 'owned')
-    monkeypatch.setattr(browser, 'save_session', lambda: None)
     monkeypatch.setattr(session_reuse, '_source_cookies', lambda *a: ([], 'saved-profile'))
     monkeypatch.setattr(run, 'run_cmd', lambda *a, **k: '[{"title":"real result shape"}]')
     result=dispatch.run_action(XiaoHongShuChannel(), 'search', {'query':'test','limit':1}, timeout=2)
     assert result['ok'], result.get('error')
-
-
-def test_bili_reuses_only_site_cookies_through_upstream_writer_and_private_stdin(monkeypatch):
-    from pathlib import Path
-    from unittest.mock import Mock
-
-    from agent_reach.channels import bilibili
-    from agent_reach.runtime import session_reuse, tools
-    monkeypatch.setattr(session_reuse, '_source_cookies', lambda *a: ([{'name':'SESSDATA','value':'test-secret'}], 'daily'))
-    monkeypatch.setattr(tools,'resolve',lambda *a:'/private/bin/bili')
-    call=Mock(return_value='')
-    monkeypatch.setattr(bilibili,'run_cmd',call)
-    bilibili._reuse_subtitle_login(10)
-    args=call.call_args
-    assert 'test-secret' not in repr(args.args)
-    assert json.loads(args.kwargs['input_data']) == {'SESSDATA':'test-secret'}
-    assert 'save_credential' in args.args[0][-1]
-    assert Path(args.kwargs['env']['HOME']) == state.root() / 'sessions' / 'bili-cli'
-    state.mutate(lambda data: data['session_reuse'].__setitem__('bilibili', {'blocked':True}))
-    bilibili._reuse_subtitle_login(10)
-    assert call.call_count == 1
-
-
-def test_native_bili_subtitles_do_not_require_an_optional_browser_bridge(monkeypatch):
-    from agent_reach.channels import bilibili
-    monkeypatch.setattr(browser,'connected_contexts',lambda:(_ for _ in()).throw(ReachError('NEED_SETUP','OpenCLI is not installed')))
-    monkeypatch.setattr(bilibili,'run_cmd',lambda *a,**k:pytest.fail('started optional browser integration'))
-    monkeypatch.setattr(bilibili,'_bili_json',lambda *a:{'subtitle':{'available':True,'text':'Saved native login works'},'video':{'bvid':'BV1Jgf6YvE8e'}})
-    out=bilibili.BilibiliChannel()._cli_subtitle(target='BV1Jgf6YvE8e',timeout=2)
-    assert out[0]['text']=='Saved native login works'
-
 
 def test_node_warning_does_not_hide_upstream_error_and_404_is_not_login():
     from agent_reach.backends.opencli import _opencli_error

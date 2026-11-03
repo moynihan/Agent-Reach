@@ -7,7 +7,7 @@ from .base import Action, Param
 
 class InstagramChannel(OpenCLISiteChannel):
     name = "instagram"
-    description = "Instagram 用户、主页和指定用户帖子"
+    description = "Instagram users, profiles and a user's posts"
     site = "instagram"
     domains = ("instagram.com", "instagr.am")
     usage = "opencli instagram search/profile/user/explore -f yaml"
